@@ -5,16 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gradex Inc</title>
   <link rel="stylesheet" href="style.css"/>
+
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 </head>
 <body>
   <header>
     <h1>Gradex Inc</h1>
   </header>
+
   <main>
     <p>Welcome to Gradex Inc. We're building innovative solutions for modern businesses.</p>
+
+    <!-- Example Supabase button -->
+    <button onclick="getData()">Fetch from Supabase</button>
+    <div id="output"></div>
   </main>
+
   <footer>
     <p>&copy; 2025 Gradex Inc. All rights reserved.</p>
   </footer>
+
+  <!-- Your Supabase connection code -->
+  <script>
+    // Replace these with your actual keys
+    const supabaseUrl = 'https://nmbapqhtmjsqwdefewfd.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    async function getData() {
+      const { data, error } = await supabase.from('your_table_name').select('*');
+      if (error) {
+        document.getElementById('output').innerText = 'Error: ' + error.message;
+      } else {
+        document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+      }
+    }
+  </script>
 </body>
 </html>
