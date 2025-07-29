@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sign In</title>
+  <title>Sign Up</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
   <style>
     body { font-family: Arial; text-align: center; margin-top: 100px; }
@@ -13,39 +13,36 @@
 </head>
 <body>
 
-  <h1>Sign In</h1>
+  <h1>Sign Up</h1>
 
-  <input type="text" id="username" placeholder="Username" /><br/>
-  <input type="password" id="password" placeholder="Password" /><br/>
-  <button onclick="signIn()">Sign In</button>
-  <button onclick="signIn()">Sign In</button><br/><br/>
-  <button onclick="window.location.href='signup.html'">Create Account</button>
-  <p id="message"></p>
+  <input type="text" id="newUsername" placeholder="Username" /><br/>
+  <input type="password" id="newPassword" placeholder="Password" /><br/>
+  <button onclick="signUp()">Create Account</button>
+
+  <p id="signupMessage"></p>
 
   <script>
-    // Replace with your actual values
     const supabaseUrl = 'https://nmbapqhtmjsqwdefewfd.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function signIn() {
-      const username = document.getElementById("username").value;
-      const password = document.getElementById("password").value;
+    async function signUp() {
+      const username = document.getElementById("newUsername").value;
+      const password = document.getElementById("newPassword").value;
 
       const { data, error } = await supabase
         .from("Users")
-        .select("*")
-        .eq("username", username)
-        .eq("password", password)
-        .single();
+        .insert([{ username, password }]);
 
-      const message = document.getElementById("message");
+      const message = document.getElementById("signupMessage");
 
-      if (error || !data) {
-        message.innerText = "Invalid credentials.";
+      if (error) {
+        message.innerText = "Error: " + error.message;
       } else {
-        message.innerText = `Welcome, ${data.username}!`;
-        // TODO: redirect or load homepage
+        message.innerText = "Account created! Redirecting to sign-in...";
+        setTimeout(() => {
+          window.location.href = "signin.html";
+        }, 1500);
       }
     }
   </script>
