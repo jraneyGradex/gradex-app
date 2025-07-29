@@ -24,3 +24,8 @@ footer {
   padding: 1rem;
   font-size: 0.9rem;
 }
+
+button {
+  padding: 10px 20px;
+  margin: 5px; /* Add this for spacing */
+}
