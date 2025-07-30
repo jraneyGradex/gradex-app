@@ -3,62 +3,181 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>User Homepage</title>
+  <title>Truck Reservations</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
   <style>
     body {
       font-family: Arial;
-      text-align: center;
-      margin-top: 100px;
-      background-color: #f9fafb;
-    }
-
-    .card {
-      background-color: white;
+      background-color: #f5f5f5;
       padding: 2rem;
-      max-width: 400px;
-      margin: auto;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-
+    h1 {
+      text-align: center;
+    }
+    .container {
+      display: flex;
+      gap: 2rem;
+      max-width: 1000px;
+      margin: auto;
+    }
+    .sidebar {
+      width: 30%;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .calendar {
+      width: 70%;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin: 0.5rem 0;
+    }
+    label, input, select {
+      display: block;
+      margin-top: 10px;
+      width: 100%;
+    }
     button {
-      margin-top: 20px;
-      padding: 10px 20px;
+      margin-top: 1rem;
+      padding: 10px;
       background-color: #0057D8;
       color: white;
       border: none;
-      border-radius: 5px;
+      width: 100%;
+      border-radius: 4px;
       cursor: pointer;
+    }
+    table {
+      width: 100%;
+      margin-top: 1rem;
+      border-collapse: collapse;
+    }
+    td, th {
+      border: 1px solid #ccc;
+      padding: 8px;
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <h1>Welcome, <span id="username">User</span>!</h1>
-    <p>You have successfully logged in.</p>
-    <button onclick="logout()">Log Out</button>
+<h1>Truck Reservations</h1>
+<div class="container">
+  <div class="sidebar">
+    <h3>Reserve a Truck</h3>
+    <label for="truck">Truck</label>
+    <select id="truckList"></select>
+
+    <label for="start">Start Time</label>
+    <input type="datetime-local" id="start">
+
+    <label for="end">End Time</label>
+    <input type="datetime-local" id="end">
+
+    <button onclick="reserveTruck()">Reserve</button>
+    <p id="reserveMessage"></p>
   </div>
 
-  <script>
-    // Access control
-    const username = localStorage.getItem("loggedInUser");
-    const role = localStorage.getItem("userRole");
+  <div class="calendar">
+    <h3>Current Reservations</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Truck</th>
+          <th>User</th>
+          <th>From</th>
+          <th>To</th>
+        </tr>
+      </thead>
+      <tbody id="calendarBody"></tbody>
+    </table>
+  </div>
+</div>
 
-    if (!username || role !== "user") {
-      alert("Access denied or not logged in.");
-      window.location.href = "index.html";
+<script>
+  const supabaseUrl = 'https://nmbapqhtmjsqwdefewfd.supabase.co';
+  const supabaseKey = 'your_anon_key_here';
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  const username = localStorage.getItem("loggedInUser");
+
+  async function loadTrucks() {
+    const { data, error } = await supabase.from("Trucks").select("*");
+    const truckList = document.getElementById("truckList");
+
+    if (error) return alert("Failed to load trucks.");
+    truckList.innerHTML = data.map(truck => `<option value="${truck.id}">${truck.name}</option>`).join("");
+  }
+
+  async function loadCalendar() {
+    const { data, error } = await supabase
+      .from("Reservations")
+      .select("*, Trucks(name)")
+      .order("start_time", { ascending: true });
+
+    const table = document.getElementById("calendarBody");
+    if (error) return alert("Failed to load reservations.");
+
+    table.innerHTML = data.map(res => `
+      <tr>
+        <td>${res.Trucks.name}</td>
+        <td>${res.username}</td>
+        <td>${new Date(res.start_time).toLocaleString()}</td>
+        <td>${new Date(res.end_time).toLocaleString()}</td>
+      </tr>
+    `).join("");
+  }
+
+  async function reserveTruck() {
+    const truck_id = document.getElementById("truckList").value;
+    const start = document.getElementById("start").value;
+    const end = document.getElementById("end").value;
+    const message = document.getElementById("reserveMessage");
+
+    if (!truck_id || !start || !end) {
+      message.innerText = "Please fill out all fields.";
+      return;
+    }
+
+    // check for conflict
+    const { data: existing } = await supabase
+      .from("Reservations")
+      .select("*")
+      .eq("truck_id", truck_id)
+      .or(`and(start_time,lte.${end},end_time,gt.${start})`);
+
+    if (existing && existing.length > 0) {
+      message.innerText = "This truck is already booked for that time.";
+      return;
+    }
+
+    const { error } = await supabase.from("Reservations").insert({
+      truck_id,
+      username,
+      start_time: start,
+      end_time: end
+    });
+
+    if (error) {
+      message.innerText = "Reservation failed.";
     } else {
-      document.getElementById("username").innerText = username;
+      message.innerText = "Truck reserved!";
+      loadCalendar(); // refresh calendar
     }
+  }
 
-    function logout() {
-      localStorage.removeItem("loggedInUser");
-      localStorage.removeItem("userRole");
-      window.location.href = "index.html";
-    }
-  </script>
+  loadTrucks();
+  loadCalendar();
+</script>
 
 </body>
 </html>
