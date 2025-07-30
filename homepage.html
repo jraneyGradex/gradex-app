@@ -3,18 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gradex Inc</title>
-  <link rel="stylesheet" href="style.css"/>
+  <title>User Homepage</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      margin-top: 100px;
+      background-color: #f9fafb;
+    }
+
+    .card {
+      background-color: white;
+      padding: 2rem;
+      max-width: 400px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #0057D8;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Gradex Inc</h1>
-  </header>
-  <main>
-    <p>Welcome to Gradex Inc. We're building innovative solutions for modern businesses.</p>
-  </main>
-  <footer>
-    <p>&copy; 2025 Gradex Inc. All rights reserved.</p>
-  </footer>
+
+  <div class="card">
+    <h1>Welcome, <span id="username">User</span>!</h1>
+    <p>You have successfully logged in.</p>
+    <button onclick="logout()">Log Out</button>
+  </div>
+
+  <script>
+    // Access control
+    const username = localStorage.getItem("loggedInUser");
+    const role = localStorage.getItem("userRole");
+
+    if (!username || role !== "user") {
+      alert("Access denied or not logged in.");
+      window.location.href = "index.html";
+    } else {
+      document.getElementById("username").innerText = username;
+    }
+
+    function logout() {
+      localStorage.removeItem("loggedInUser");
+      localStorage.removeItem("userRole");
+      window.location.href = "index.html";
+    }
+  </script>
+
 </body>
 </html>

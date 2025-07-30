@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      margin-top: 100px;
+      background-color: #f3f6fb;
+    }
+    .card {
+      background-color: white;
+      padding: 2rem;
+      max-width: 400px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #002B5B;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Welcome, Admin</h1>
+    <p id="adminMessage">Loading...</p>
+    <button onclick="logout()">Log Out</button>
+  </

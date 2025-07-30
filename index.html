@@ -25,30 +25,34 @@
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   async function signIn() {
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
-    const message = document.getElementById("message");
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const message = document.getElementById("message");
 
-    const { data, error } = await supabase
-      .from("Users")
-      .select("*")
-      .eq("username", username)
-      .eq("password", password)
-      .single();
+  const { data, error } = await supabase
+    .from("Users")
+    .select("*")
+    .eq("username", username)
+    .eq("password", password)
+    .single();
 
-    if (error || !data) {
-      message.innerText = "Invalid credentials.";
-    } else {
-      message.innerText = `Welcome, ${data.username}! Redirecting...`;
+  if (error || !data) {
+    message.innerText = "Invalid credentials.";
+  } else {
+    message.innerText = `Welcome, ${data.username}! Redirecting...`;
 
-      // Optionally store session info
-      localStorage.setItem("loggedInUser", data.username);
+    localStorage.setItem("loggedInUser", data.username);
+    localStorage.setItem("userRole", data.role); // 👈 NEW LINE
 
-      setTimeout(() => {
-        window.location.href = "homepage.html";
-      }, 1000);
-    }
+    setTimeout(() => {
+  if (data.role === "admin") {
+    window.location.href = "admin.html";
+  } else {
+    window.location.href = "homepage.html";
   }
+}, 1000);
+  }
+}
 </script>
 
 </body>
