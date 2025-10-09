@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gradex Inc - Sign Up</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <h2>Sign Up - Gradex Inc</h2>
+
+  <form onsubmit="signUpUser(); return false;">
+    <label for="name">Full Name</label>
+    <input id="name" type="text" placeholder="Jane Doe" required />
+
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="you@example.com" required />
+
+    <label for="password">Password</label>
+    <input id="password" type="password" placeholder="••••••••" required />
+
+    <button type="submit">Create Account</button>
+  </form>
+
+  <p id="message" style="color: red; margin-top: 10px;"></p>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://nmbapqhtmjsqwdefewfd.supabase.co", // replace with your project URL
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM"                 // replace with your anon key
+    );
+
+    async function signUpUser() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const name = document.getElementById("name").value.trim();
+      const message = document.getElementById("message");
+
+      message.textContent = "";
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password
+      });
+
+      if (signUpError) {
+        message.textContent = "Signup failed: " + signUpError.message;
+        return;
+      }
+
+      const user = signUpData.user;
+      if (!user) {
+        message.textContent = "Signup incomplete. Please check your email.";
+        return;
+      }
+
+      // Insert into custom "profiles" table
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: user.id,
+        name,
+        user_type: "user"
+      });
+
+      if (profileError) {
+        message.textContent = "Profile error: " + profileError.message;
+        return;
+      }
+
+      alert("Signup successful! You may now log in.");
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
