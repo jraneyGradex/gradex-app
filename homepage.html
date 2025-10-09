@@ -73,7 +73,7 @@
   // Load trucks into dropdown
   async function loadTrucks() {
   const truckList = document.getElementById("truckList");
-  const { data, error } = await supabase.from("Trucks").select("*");
+  const { data, error } = await supabase.from("Trucks").select("id, name");
 
   if (error) {
     console.error("Truck load error:", error);
