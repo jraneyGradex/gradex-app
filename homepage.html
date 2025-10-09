@@ -73,7 +73,10 @@
   // Load trucks into dropdown
   async function loadTrucks() {
   const truckList = document.getElementById("truckList");
-  const { data, error } = await supabase.from("Trucks").select("id, name");
+
+  const { data, error } = await supabase
+    .from("Trucks")
+    .select("id, name");
 
   if (error) {
     console.error("Truck load error:", error);
@@ -81,7 +84,8 @@
     return;
   }
 
-  //  Use UUID for truck ID in value attribute
+  console.log("Loaded trucks:", data);  //  Confirm you're getting UUIDs
+
   truckList.innerHTML = data.map(truck =>
     `<option value="${truck.id}">${truck.name}</option>`
   ).join("");
