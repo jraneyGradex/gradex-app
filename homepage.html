@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Truck Reservations</title>
+
+  <!-- Style + FullCalendar CSS -->
   <link rel="stylesheet" href="style.css" />
-
-  <!-- FullCalendar CSS -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
 
+  <!-- FullCalendar + Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 
   <style>
@@ -28,21 +29,22 @@
       margin: auto;
       flex-wrap: wrap;
     }
-    .sidebar {
-      flex: 1;
-      min-width: 300px;
+    .sidebar, .calendar {
       background: white;
       padding: 1rem;
       border-radius: 8px;
       box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
+    .sidebar {
+      flex: 1;
+      min-width: 300px;
+    }
     .calendar {
       flex: 2;
       min-width: 600px;
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    #calendar {
+      min-height: 600px;
     }
     label, input, select {
       display: block;
@@ -104,7 +106,7 @@
     </table>
   </div>
 
-  <!-- FullCalendar View -->
+  <!-- Calendar -->
   <div class="calendar">
     <h3>Calendar View</h3>
     <div id="calendar"></div>
@@ -112,9 +114,12 @@
 </div>
 
 <script>
-  const supabaseUrl = 'https://nmbapqhtmjsqwdefewfd.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM';
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  // 🔐 Replace with your real project URL + anon key
+  const supabase = supabase.createClient(
+    "https://nmbapqhtmjsqwdefewfd.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM"
+  );
+
   const username = localStorage.getItem("loggedInUser");
 
   async function loadTrucks() {
@@ -123,10 +128,12 @@
 
     if (error) {
       alert("Failed to load trucks.");
+      console.error("Truck load error:", error);
       return;
     }
 
     truckList.innerHTML = data.map(truck => `<option value="${truck.id}">${truck.name}</option>`).join("");
+    console.log("Loaded trucks:", data);
   }
 
   async function loadCalendarTable() {
@@ -136,7 +143,10 @@
       .order("start_time", { ascending: true });
 
     const table = document.getElementById("calendarBody");
-    if (error) return;
+    if (error) {
+      console.error("Calendar table load error:", error);
+      return;
+    }
 
     table.innerHTML = data.map(res => `
       <tr>
@@ -146,15 +156,23 @@
         <td>${new Date(res.end_time).toLocaleString()}</td>
       </tr>
     `).join("");
+
+    console.log("Table data:", data);
   }
 
   async function loadFullCalendar() {
+    const calendarEl = document.getElementById("calendar");
+    if (!calendarEl) {
+      console.error("Calendar container not found.");
+      return;
+    }
+
     const { data, error } = await supabase
       .from("Reservations")
       .select("*, Trucks(name)");
 
     if (error) {
-      console.error("Calendar load failed:", error.message);
+      console.error("Failed to fetch calendar events:", error);
       return;
     }
 
@@ -164,15 +182,16 @@
       end: res.end_time
     }));
 
-    const calendarEl = document.getElementById('calendar');
+    console.log("FullCalendar events:", events);
+
     const calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: 'timeGridWeek',
-      height: 'auto',
+      initialView: "timeGridWeek",
+      height: "auto",
       events,
       headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'timeGridWeek,timeGridDay'
+        left: "prev,next today",
+        center: "title",
+        right: "timeGridWeek,timeGridDay"
       }
     });
 
@@ -190,7 +209,6 @@
       return;
     }
 
-    // Conflict check
     const { data: existing } = await supabase
       .from("Reservations")
       .select("*")
@@ -212,6 +230,7 @@
 
     if (error) {
       message.innerText = "Reservation failed.";
+      console.error("Insert error:", error);
     } else {
       message.innerText = "Truck reserved!";
       loadCalendarTable();
@@ -219,6 +238,7 @@
     }
   }
 
+  // Initial load
   loadTrucks();
   loadCalendarTable();
   loadFullCalendar();
