@@ -29,3 +29,7 @@ button {
   padding: 10px 20px;
   margin: 5px; /* Add this for spacing */
 }
+
+#calendar {
+  min-height: 600px;
+}
