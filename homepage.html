@@ -3,267 +3,113 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Truck Reservations</title>
-
-  <!-- Your custom stylesheet -->
+  <title>Gradex Inc - Reservations</title>
   <link rel="stylesheet" href="style.css" />
-
-  <!-- ✅ FullCalendar v6 CSS + JS (Working CDN) -->
-  <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
-  <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
-
-  <!-- ✅ Supabase client (UMD version for browser use) -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-
-  <!-- Optional: Inline custom styles if needed -->
-  <style>
-    #calendar {
-      min-height: 600px;
-    }
-  </style>
-</head>
-  <style>
-    body {
-      font-family: Arial;
-      background-color: #f5f5f5;
-      padding: 2rem;
-    }
-    h1 {
-      text-align: center;
-    }
-    .container {
-      display: flex;
-      gap: 2rem;
-      max-width: 1200px;
-      margin: auto;
-      flex-wrap: wrap;
-    }
-    .sidebar, .calendar {
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    .sidebar {
-      flex: 1;
-      min-width: 300px;
-    }
-    .calendar {
-      flex: 2;
-      min-width: 600px;
-    }
-    #calendar {
-      min-height: 600px;
-    }
-    label, input, select {
-      display: block;
-      margin-top: 10px;
-      width: 100%;
-    }
-    button {
-      margin-top: 1rem;
-      padding: 10px;
-      background-color: #0057D8;
-      color: white;
-      border: none;
-      width: 100%;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    table {
-      width: 100%;
-      margin-top: 1rem;
-      border-collapse: collapse;
-    }
-    td, th {
-      border: 1px solid #ccc;
-      padding: 8px;
-    }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 </head>
 <body>
+  <h2>Truck Reservations</h2>
 
-<h1>Truck Reservations</h1>
-
-<div class="container">
-  <!-- Reservation Form -->
-  <div class="sidebar">
-    <h3>Reserve a Truck</h3>
-    <label for="truck">Truck</label>
-    <select id="truckList"></select>
-
-    <label for="start">Start Time</label>
-    <input type="datetime-local" id="start">
-
-    <label for="end">End Time</label>
-    <input type="datetime-local" id="end">
-
-    <button onclick="reserveTruck()">Reserve</button>
-    <p id="reserveMessage"></p>
-
-    <h4>Current Reservations (Table)</h4>
-    <table>
-      <thead>
-        <tr>
-          <th>Truck</th>
-          <th>User</th>
-          <th>From</th>
-          <th>To</th>
-        </tr>
-      </thead>
-      <tbody id="calendarBody"></tbody>
-    </table>
+  <div id="truck-list">
+    <h3>Available Trucks</h3>
+    <ul id="trucks"></ul>
   </div>
 
-  <!-- Calendar -->
-  <div class="calendar">
-    <h3>Calendar View</h3>
-    <div id="calendar"></div>
-  </div>
-</div>
+  <div id="calendar" style="margin-top: 20px;"></div>
 
-<script>
- const supabase = window.supabase.createClient(
-    "https://nmbapqhtmjsqwdefewfd.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM"
-  );
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://YOUR_PROJECT_ID.supabase.co",
+      "YOUR_PUBLIC_ANON_KEY"
+    );
 
-  const username = localStorage.getItem("loggedInUser");
+    const truckListElement = document.getElementById("trucks");
+    const calendarElement = document.getElementById("calendar");
 
-  async function loadTrucks() {
-    const truckList = document.getElementById("truckList");
-    if (!truckList) {
-      console.error("Missing #truckList element in DOM");
-      return;
+    const userId = localStorage.getItem("user_id");
+    const userName = localStorage.getItem("name");
+    const userType = localStorage.getItem("user_type");
+
+    if (!userId) {
+      alert("You're not signed in.");
+      window.location.href = "index.html";
     }
 
-    const { data, error } = await supabase.from("Trucks").select("*");
+    // Load all trucks
+    async function loadTrucks() {
+      const { data: trucks, error } = await supabase.from("Trucks").select("*");
 
-    if (error) {
-      alert("Failed to load trucks.");
-      console.error("Truck load error:", error);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      truckList.innerHTML = `<option>No trucks found</option>`;
-      return;
-    }
-
-    truckList.innerHTML = data.map(truck => 
-      `<option value="${truck.id}">${truck.name}</option>`
-    ).join("");
-
-    console.log("✅ Loaded trucks:", data);
-  }
-
-  async function loadCalendarTable() {
-    const { data, error } = await supabase
-      .from("Reservations")
-      .select("*, Trucks(name)")
-      .order("start_time", { ascending: true });
-
-    const table = document.getElementById("calendarBody");
-    if (error) {
-      console.error("Calendar table load error:", error);
-      return;
-    }
-
-    table.innerHTML = data.map(res => `
-      <tr>
-        <td>${res.Trucks.name}</td>
-        <td>${res.username}</td>
-        <td>${new Date(res.start_time).toLocaleString()}</td>
-        <td>${new Date(res.end_time).toLocaleString()}</td>
-      </tr>
-    `).join("");
-
-    console.log("📋 Table data:", data);
-  }
-
-  async function loadFullCalendar() {
-    const calendarEl = document.getElementById("calendar");
-    if (!calendarEl) {
-      console.error("Calendar container not found.");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("Reservations")
-      .select("*, Trucks(name)");
-
-    if (error) {
-      console.error("Failed to fetch calendar events:", error);
-      return;
-    }
-
-    const events = data.map(res => ({
-      title: `${res.Trucks.name} - ${res.username}`,
-      start: res.start_time,
-      end: res.end_time
-    }));
-
-    console.log("📅 FullCalendar events:", events);
-
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: "timeGridWeek",
-      height: "auto",
-      events,
-      headerToolbar: {
-        left: "prev,next today",
-        center: "title",
-        right: "timeGridWeek,timeGridDay"
+      if (error) {
+        console.error("Error loading trucks:", error.message);
+        truckListElement.innerHTML = "<li>Error loading trucks</li>";
+        return;
       }
-    });
 
-    calendar.render();
-  }
-
-  async function reserveTruck() {
-    const truck_id = document.getElementById("truckList").value;
-    const start = document.getElementById("start").value;
-    const end = document.getElementById("end").value;
-    const message = document.getElementById("reserveMessage");
-
-    if (!truck_id || !start || !end) {
-      message.innerText = "Please fill out all fields.";
-      return;
+      truckListElement.innerHTML = "";
+      trucks.forEach(truck => {
+        const li = document.createElement("li");
+        li.textContent = `${truck.name}`;
+        li.style.cursor = "pointer";
+        li.onclick = () => promptReservation(truck);
+        truckListElement.appendChild(li);
+      });
     }
 
-    const { data: existing } = await supabase
-      .from("Reservations")
-      .select("*")
-      .eq("truck_id", truck_id)
-      .lt("start_time", end)
-      .gt("end_time", start);
+    // Prompt reservation form
+    async function promptReservation(truck) {
+      const startTime = prompt(`Enter start time for ${truck.name} (YYYY-MM-DDTHH:MM):`);
+      const endTime = prompt(`Enter end time for ${truck.name} (YYYY-MM-DDTHH:MM):`);
 
-    if (existing && existing.length > 0) {
-      message.innerText = "This truck is already booked for that time.";
-      return;
+      if (!startTime || !endTime) return;
+
+      const { error } = await supabase.from("reservations").insert({
+        truck_id: truck.id,
+        user_id: userId,
+        start_time: startTime,
+        end_time: endTime
+      });
+
+      if (error) {
+        alert("Reservation failed: " + error.message);
+        console.error(error);
+      } else {
+        alert("Reservation confirmed!");
+        loadReservations(); // refresh calendar
+      }
     }
 
-    const { error } = await supabase.from("Reservations").insert({
-      truck_id,
-      username,
-      start_time: start,
-      end_time: end
-    });
+    // Load reservations into calendar
+    async function loadReservations() {
+      const { data: reservations, error } = await supabase
+        .from("reservations")
+        .select("id, start_time, end_time, truck_id, profiles(name), Trucks(name)");
 
-    if (error) {
-      message.innerText = "Reservation failed.";
-      console.error("Insert error:", error);
-    } else {
-      message.innerText = "Truck reserved!";
-      loadCalendarTable();
-      loadFullCalendar();
+      if (error) {
+        console.error("Error loading reservations:", error.message);
+        return;
+      }
+
+      const events = reservations.map(res => ({
+        title: `${res.Trucks.name} → ${res.profiles.name}`,
+        start: res.start_time,
+        end: res.end_time
+      }));
+
+      const calendar = new FullCalendar.Calendar(calendarElement, {
+        initialView: "dayGridMonth",
+        height: "auto",
+        events
+      });
+
+      calendar.render();
     }
-  }
 
-  // Initial page load
-  loadTrucks();
-  loadCalendarTable();
-  loadFullCalendar();
-</script>
-
+    // Initialize
+    loadTrucks();
+    loadReservations();
+  </script>
 </body>
 </html>
+
