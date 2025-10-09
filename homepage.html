@@ -72,19 +72,20 @@
 
   // Load trucks into dropdown
   async function loadTrucks() {
-    const truckList = document.getElementById("truckList");
-    const { data, error } = await supabase.from("Trucks").select("*");
+  const truckList = document.getElementById("truckList");
+  const { data, error } = await supabase.from("Trucks").select("*");
 
-    if (error) {
-      console.error("Truck load error:", error);
-      truckList.innerHTML = `<option>Error loading trucks</option>`;
-      return;
-    }
-
-    truckList.innerHTML = data.map(truck =>
-      `<option value="${truck.id}">${truck.name}</option>`
-    ).join("");
+  if (error) {
+    console.error("Truck load error:", error);
+    truckList.innerHTML = `<option>Error loading trucks</option>`;
+    return;
   }
+
+  //  Use UUID for truck ID in value attribute
+  truckList.innerHTML = data.map(truck =>
+    `<option value="${truck.id}">${truck.name}</option>`
+  ).join("");
+}
 
   // Reservation form submission
   async function reserveTruck() {
