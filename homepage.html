@@ -5,14 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Truck Reservations</title>
 
-  <!-- Style + FullCalendar CSS -->
+  <!-- Your custom stylesheet -->
   <link rel="stylesheet" href="style.css" />
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
 
-  <!-- FullCalendar + Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
+  <!-- ✅ FullCalendar v6 CSS + JS (Working CDN) -->
+  <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+  <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
+
+  <!-- ✅ Supabase client (UMD version for browser use) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 
+  <!-- Optional: Inline custom styles if needed -->
+  <style>
+    #calendar {
+      min-height: 600px;
+    }
+  </style>
+</head>
   <style>
     body {
       font-family: Arial;
