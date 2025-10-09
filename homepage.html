@@ -3,113 +3,192 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gradex Inc - Reservations</title>
+  <title>Truck Reservations</title>
+
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+
+  <!-- FullCalendar -->
+  <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+  <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
+
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 </head>
 <body>
-  <h2>Truck Reservations</h2>
+  <h1>Truck Reservations</h1>
 
-  <div id="truck-list">
-    <h3>Available Trucks</h3>
-    <ul id="trucks"></ul>
+  <div class="container">
+    <!-- Reservation Form -->
+    <div class="sidebar">
+      <h3>Reserve a Truck</h3>
+      <label for="truck">Truck</label>
+      <select id="truckList"></select>
+
+      <label for="start">Start Time</label>
+      <input type="datetime-local" id="start">
+
+      <label for="end">End Time</label>
+      <input type="datetime-local" id="end">
+
+      <button onclick="reserveTruck()">Reserve</button>
+      <p id="reserveMessage"></p>
+
+      <h4>Current Reservations</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Truck</th>
+            <th>User</th>
+            <th>From</th>
+            <th>To</th>
+          </tr>
+        </thead>
+        <tbody id="calendarBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Calendar -->
+    <div class="calendar">
+      <h3>Calendar View</h3>
+      <div id="calendar"></div>
+    </div>
   </div>
 
-  <div id="calendar" style="margin-top: 20px;"></div>
+<script>
+  const supabase = window.supabase.createClient(
+    "https://YOUR_PROJECT_ID.supabase.co",   // replace
+    "YOUR_PUBLIC_ANON_KEY"                   // replace
+  );
 
-  <script>
-    const supabase = window.supabase.createClient(
-      "https://YOUR_PROJECT_ID.supabase.co",
-      "YOUR_PUBLIC_ANON_KEY"
-    );
+  const userId = localStorage.getItem("user_id");
+  const userName = localStorage.getItem("name");
+  const userType = localStorage.getItem("user_type");
 
-    const truckListElement = document.getElementById("trucks");
-    const calendarElement = document.getElementById("calendar");
+  if (!userId) {
+    alert("You are not signed in.");
+    window.location.href = "index.html";
+  }
 
-    const userId = localStorage.getItem("user_id");
-    const userName = localStorage.getItem("name");
-    const userType = localStorage.getItem("user_type");
+  // Load trucks into dropdown
+  async function loadTrucks() {
+    const truckList = document.getElementById("truckList");
+    const { data, error } = await supabase.from("Trucks").select("*");
 
-    if (!userId) {
-      alert("You're not signed in.");
-      window.location.href = "index.html";
+    if (error) {
+      console.error("Truck load error:", error);
+      truckList.innerHTML = `<option>Error loading trucks</option>`;
+      return;
     }
 
-    // Load all trucks
-    async function loadTrucks() {
-      const { data: trucks, error } = await supabase.from("Trucks").select("*");
+    truckList.innerHTML = data.map(truck =>
+      `<option value="${truck.id}">${truck.name}</option>`
+    ).join("");
+  }
 
-      if (error) {
-        console.error("Error loading trucks:", error.message);
-        truckListElement.innerHTML = "<li>Error loading trucks</li>";
-        return;
+  // Reservation form submission
+  async function reserveTruck() {
+    const truck_id = document.getElementById("truckList").value;
+    const start = document.getElementById("start").value;
+    const end = document.getElementById("end").value;
+    const message = document.getElementById("reserveMessage");
+
+    if (!truck_id || !start || !end) {
+      message.innerText = "Please fill out all fields.";
+      return;
+    }
+
+    // Check for overlaps
+    const { data: existing } = await supabase
+      .from("Reservations")
+      .select("*")
+      .eq("truck_id", truck_id)
+      .lt("start_time", end)
+      .gt("end_time", start);
+
+    if (existing && existing.length > 0) {
+      message.innerText = "This truck is already booked for that time.";
+      return;
+    }
+
+    const { error } = await supabase.from("Reservations").insert({
+      truck_id,
+      user_id: userId,
+      start_time: start,
+      end_time: end
+    });
+
+    if (error) {
+      message.innerText = "Reservation failed.";
+      console.error("Insert error:", error);
+    } else {
+      message.innerText = "Truck reserved!";
+      loadCalendarTable();
+      loadFullCalendar();
+    }
+  }
+
+  // Populate reservation table
+  async function loadCalendarTable() {
+    const { data, error } = await supabase
+      .from("Reservations")
+      .select("*, Trucks(name), profiles(name)")
+      .order("start_time", { ascending: true });
+
+    const table = document.getElementById("calendarBody");
+
+    if (error) {
+      console.error("Table load error:", error);
+      return;
+    }
+
+    table.innerHTML = data.map(res => `
+      <tr>
+        <td>${res.Trucks.name}</td>
+        <td>${res.profiles?.name || "Unknown"}</td>
+        <td>${new Date(res.start_time).toLocaleString()}</td>
+        <td>${new Date(res.end_time).toLocaleString()}</td>
+      </tr>
+    `).join("");
+  }
+
+  // Load reservations into FullCalendar
+  async function loadFullCalendar() {
+    const calendarEl = document.getElementById("calendar");
+    const { data, error } = await supabase
+      .from("Reservations")
+      .select("*, Trucks(name), profiles(name)");
+
+    if (error) {
+      console.error("Calendar load error:", error);
+      return;
+    }
+
+    const events = data.map(res => ({
+      title: `${res.Trucks.name} - ${res.profiles?.name || "Unknown"}`,
+      start: res.start_time,
+      end: res.end_time
+    }));
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: "timeGridWeek",
+      height: "auto",
+      events,
+      headerToolbar: {
+        left: "prev,next today",
+        center: "title",
+        right: "dayGridMonth,timeGridWeek,timeGridDay"
       }
+    });
 
-      truckListElement.innerHTML = "";
-      trucks.forEach(truck => {
-        const li = document.createElement("li");
-        li.textContent = `${truck.name}`;
-        li.style.cursor = "pointer";
-        li.onclick = () => promptReservation(truck);
-        truckListElement.appendChild(li);
-      });
-    }
+    calendar.render();
+  }
 
-    // Prompt reservation form
-    async function promptReservation(truck) {
-      const startTime = prompt(`Enter start time for ${truck.name} (YYYY-MM-DDTHH:MM):`);
-      const endTime = prompt(`Enter end time for ${truck.name} (YYYY-MM-DDTHH:MM):`);
-
-      if (!startTime || !endTime) return;
-
-      const { error } = await supabase.from("reservations").insert({
-        truck_id: truck.id,
-        user_id: userId,
-        start_time: startTime,
-        end_time: endTime
-      });
-
-      if (error) {
-        alert("Reservation failed: " + error.message);
-        console.error(error);
-      } else {
-        alert("Reservation confirmed!");
-        loadReservations(); // refresh calendar
-      }
-    }
-
-    // Load reservations into calendar
-    async function loadReservations() {
-      const { data: reservations, error } = await supabase
-        .from("reservations")
-        .select("id, start_time, end_time, truck_id, profiles(name), Trucks(name)");
-
-      if (error) {
-        console.error("Error loading reservations:", error.message);
-        return;
-      }
-
-      const events = reservations.map(res => ({
-        title: `${res.Trucks.name} → ${res.profiles.name}`,
-        start: res.start_time,
-        end: res.end_time
-      }));
-
-      const calendar = new FullCalendar.Calendar(calendarElement, {
-        initialView: "dayGridMonth",
-        height: "auto",
-        events
-      });
-
-      calendar.render();
-    }
-
-    // Initialize
-    loadTrucks();
-    loadReservations();
-  </script>
+  // Init page
+  loadTrucks();
+  loadCalendarTable();
+  loadFullCalendar();
+</script>
 </body>
 </html>
 
