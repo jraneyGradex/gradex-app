@@ -93,45 +93,40 @@
 
   // Reservation form submission
   async function reserveTruck() {
-    const truck_id = document.getElementById("truckList").value;
-    const start = document.getElementById("start").value;
-    const end = document.getElementById("end").value;
-    const message = document.getElementById("reserveMessage");
+  const truck_id = document.getElementById("truckList").value;
+  const start = document.getElementById("start").value;
+  const end = document.getElementById("end").value;
+  const userId = localStorage.getItem("user_id");
+  const message = document.getElementById("reserveMessage");
 
-    if (!truck_id || !start || !end) {
-      message.innerText = "Please fill out all fields.";
-      return;
-    }
+  // ✅ Bonus logging goes here
+  console.log("Trying to insert reservation with:");
+  console.log("truck_id:", truck_id, typeof truck_id);
+  console.log("user_id:", userId, typeof userId);
+  console.log("start_time:", start, typeof start);
+  console.log("end_time:", end, typeof end);
 
-    // Check for overlaps
-    const { data: existing } = await supabase
-      .from("Reservations")
-      .select("*")
-      .eq("truck_id", truck_id)
-      .lt("start_time", end)
-      .gt("end_time", start);
+  // Now the insert happens
+  const { error } = await supabase.from("Reservations").insert({
+    truck_id,
+    user_id: userId,
+    start_time: start,
+    end_time: end
+  });
 
-    if (existing && existing.length > 0) {
-      message.innerText = "This truck is already booked for that time.";
-      return;
-    }
-
-    const { error } = await supabase.from("Reservations").insert({
-      truck_id: truck_id,
-      user_id: userId,
-      start_time: start,
-      end_time: end
-    });
-
-    if (error) {
-      message.innerText = "Reservation failed.";
-      console.error("Insert error:", error);
-    } else {
-      message.innerText = "Truck reserved!";
-      loadCalendarTable();
-      loadFullCalendar();
-    }
+  if (error) {
+    message.innerText = "Reservation failed.";
+    console.error("Insert failed:");
+    console.error("Message:", error.message);
+    console.error("Details:", error.details);
+    console.error("Code:", error.code);
+    console.error("Full error object:", error);
+  } else {
+    message.innerText = "Truck reserved!";
+    loadCalendarTable();
+    loadFullCalendar();
   }
+}
 
   // Populate reservation table
   async function loadCalendarTable() {
