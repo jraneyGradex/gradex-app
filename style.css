@@ -33,3 +33,92 @@ button {
 #calendar {
   min-height: 600px;
 }
+
+/* === Gradex Color Theme === */
+body {
+  background-color: #F3F6FB;
+  color: #1E1E1E;
+  font-family: "Arial", sans-serif;
+}
+
+h1, h2, h3, h4 {
+  color: #1E1E1E;
+}
+
+button {
+  background-color: #8DC63F;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #76b531;
+}
+
+/* === Sidebar Container === */
+.sidebar {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* === Reservation Table Styling (Gradex colors) === */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+thead {
+  background-color: #1E1E1E;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #F3F6FB;
+}
+
+tbody tr:hover {
+  background-color: #E9F3D9; /* subtle green tint */
+  transition: background-color 0.2s ease-in-out;
+}
+
+td {
+  border-bottom: 1px solid #ddd;
+}
+
+h4 {
+  margin-top: 25px;
+  color: #8DC63F;
+}
+
+/* === Calendar Styling === */
+#calendar {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 10px;
+}
+
+/* === Logout Button Alignment === */
+.header-actions {
+  text-align: right;
+  margin-right: 20px;
+}
