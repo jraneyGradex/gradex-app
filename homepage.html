@@ -34,12 +34,11 @@
       <button onclick="reserveTruck()">Reserve</button>
       <p id="reserveMessage"></p>
 
-      <h4>Current Reservations</h4>
+      <h4>My Reservations</h4>
       <table>
         <thead>
           <tr>
             <th>Truck</th>
-            <th>User</th>
             <th>From</th>
             <th>To</th>
           </tr>
@@ -57,8 +56,8 @@
 
 <script>
   const supabase = window.supabase.createClient(
-    "https://nmbapqhtmjsqwdefewfd.supabase.co",   // replace
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM"                   // replace
+    "https://nmbapqhtmjsqwdefewfd.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM"
   );
 
   const userId = localStorage.getItem("user_id");
@@ -72,67 +71,84 @@
 
   // Load trucks into dropdown
   async function loadTrucks() {
-  const truckList = document.getElementById("truckList");
+    const truckList = document.getElementById("truckList");
 
-  const { data, error } = await supabase
-    .from("Trucks")
-    .select("id, name");
+    const { data, error } = await supabase
+      .from("Trucks")
+      .select("id, name");
 
-  if (error) {
-    console.error("Truck load error:", error);
-    truckList.innerHTML = `<option>Error loading trucks</option>`;
-    return;
+    if (error) {
+      console.error("Truck load error:", error);
+      truckList.innerHTML = `<option>Error loading trucks</option>`;
+      return;
+    }
+
+    truckList.innerHTML = data.map(truck =>
+      `<option value="${truck.id}">${truck.name}</option>`
+    ).join("");
   }
 
-  console.log("Loaded trucks:", data);  //  Confirm you're getting UUIDs
-
-  truckList.innerHTML = data.map(truck =>
-    `<option value="${truck.id}">${truck.name}</option>`
-  ).join("");
-}
-
-  // Reservation form submission
+  // Reservation form submission with conflict prevention
   async function reserveTruck() {
-  const truck_id = document.getElementById("truckList").value;
-  const start = document.getElementById("start").value;
-  const end = document.getElementById("end").value;
-  const userId = localStorage.getItem("user_id");
-  const message = document.getElementById("reserveMessage");
+    const truck_id = document.getElementById("truckList").value;
+    const start = document.getElementById("start").value;
+    const end = document.getElementById("end").value;
+    const userId = localStorage.getItem("user_id");
+    const message = document.getElementById("reserveMessage");
 
-  // ✅ Bonus logging goes here
-  console.log("Trying to insert reservation with:");
-  console.log("truck_id:", truck_id, typeof truck_id);
-  console.log("user_id:", userId, typeof userId);
-  console.log("start_time:", start, typeof start);
-  console.log("end_time:", end, typeof end);
+    if (!truck_id || !start || !end) {
+      message.innerText = "Please fill out all fields.";
+      return;
+    }
 
-  // Now the insert happens
-  const { error } = await supabase.from("Reservations").insert({
-    truck_id,
-    user_id: userId,
-    start_time: start,
-    end_time: end
-  });
+    // 🔍 Check for conflicting reservations
+    const { data: conflicts, error: conflictError } = await supabase
+      .from("Reservations")
+      .select("*, profiles(name)")
+      .eq("truck_id", truck_id)
+      .lte("start_time", end)
+      .gte("end_time", start);
 
-  if (error) {
-    message.innerText = "Reservation failed.";
-    console.error("Insert failed:");
-    console.error("Message:", error.message);
-    console.error("Details:", error.details);
-    console.error("Code:", error.code);
-    console.error("Full error object:", error);
-  } else {
-    message.innerText = "Truck reserved!";
-    loadCalendarTable();
-    loadFullCalendar();
+    if (conflictError) {
+      console.error("Conflict check error:", conflictError);
+      message.innerText = "Error checking availability.";
+      return;
+    }
+
+    if (conflicts.length > 0) {
+      const c = conflicts[0];
+      const startTime = new Date(c.start_time).toLocaleString();
+      const endTime = new Date(c.end_time).toLocaleString();
+      message.innerHTML = `🚫 This truck is already reserved by <b>${c.profiles?.name || "another user"}</b><br>From <b>${startTime}</b> to <b>${endTime}</b>.`;
+      return;
+    }
+
+    // 📝 Insert reservation if available
+    const { error } = await supabase.from("Reservations").insert({
+      truck_id,
+      user_id: userId,
+      start_time: start,
+      end_time: end
+    });
+
+    if (error) {
+      message.innerText = "Reservation failed.";
+      console.error("Insert failed:", error);
+    } else {
+      message.innerText = "✅ Truck reserved!";
+      loadCalendarTable();
+      loadFullCalendar();
+    }
   }
-}
 
-  // Populate reservation table
+  // Populate reservation table (only current user)
   async function loadCalendarTable() {
+    const userId = localStorage.getItem("user_id");
+
     const { data, error } = await supabase
       .from("Reservations")
       .select("*, Trucks(name), profiles(name)")
+      .eq("user_id", userId)
       .order("start_time", { ascending: true });
 
     const table = document.getElementById("calendarBody");
@@ -145,19 +161,20 @@
     table.innerHTML = data.map(res => `
       <tr>
         <td>${res.Trucks.name}</td>
-        <td>${res.profiles?.name || "Unknown"}</td>
         <td>${new Date(res.start_time).toLocaleString()}</td>
         <td>${new Date(res.end_time).toLocaleString()}</td>
       </tr>
     `).join("");
   }
 
-  // Load reservations into FullCalendar
+  // Load reservations into FullCalendar (only current user)
   async function loadFullCalendar() {
-    const calendarEl = document.getElementById("calendar");
+    const userId = localStorage.getItem("user_id");
+
     const { data, error } = await supabase
       .from("Reservations")
-      .select("*, Trucks(name), profiles(name)");
+      .select("*, Trucks(name), profiles(name)")
+      .eq("user_id", userId);
 
     if (error) {
       console.error("Calendar load error:", error);
@@ -165,11 +182,12 @@
     }
 
     const events = data.map(res => ({
-      title: `${res.Trucks.name} - ${res.profiles?.name || "Unknown"}`,
+      title: `${res.Trucks.name}`,
       start: res.start_time,
       end: res.end_time
     }));
 
+    const calendarEl = document.getElementById("calendar");
     const calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: "timeGridWeek",
       height: "auto",
@@ -184,6 +202,12 @@
     calendar.render();
   }
 
+  // Logout function
+  function logout() {
+    localStorage.clear();
+    window.location.href = "index.html";
+  }
+
   // Init page
   loadTrucks();
   loadCalendarTable();
@@ -191,4 +215,5 @@
 </script>
 </body>
 </html>
+
 
