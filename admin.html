@@ -162,46 +162,86 @@
     }
 
     // ---------- TRUCKS ----------
-    async function loadTrucks(){
-      const status = document.getElementById('trucks-status');
-      status.textContent = 'Loading trucks...';
-      const { data, error } = await supabase.from('Trucks').select('id, name').order('name', { ascending:true });
-      if (error){ console.error('loadTrucks error:', error); status.innerHTML = `<span class="err">Error: ${error.message}</span>`; return; }
-      const tbody = document.querySelector('#trucks-table tbody');
-      tbody.innerHTML = (data || []).map(t => `
+     async function loadTrucks(){
+    const status = document.getElementById('trucks-status');
+    status.textContent = 'Loading trucks...';
+
+    const { data, error } = await supabase
+      .from('Trucks')               // if your table is lowercase, use 'trucks'
+      .select('id, name')
+      .order('name', { ascending: true });
+
+    if (error){
+      console.error('loadTrucks error:', error);
+      status.innerHTML = `<span class="err">Error: ${error.message}</span>`;
+      return;
+    }
+
+    const tbody = document.querySelector('#trucks-table tbody');
+    tbody.innerHTML = (data || []).map(t => {
+      // Pass the id as a string to be safe for UUIDs
+      const idArg = String(t.id).replace(/"/g, '\\"').replace(/'/g, "\\'");
+      return `
         <tr>
           <td>${escapeHtml(t.name)}</td>
           <td class="actions">
-            <button class="btn secondary" onclick="deleteTruck(${t.id})">Delete</button>
+            <button class="btn secondary" onclick="deleteTruck('${idArg}')">Delete</button>
           </td>
         </tr>
-      `).join('');
-      status.innerHTML = `<span class="ok">Loaded ${data?.length ?? 0} truck(s).</span>`;
+      `;
+    }).join('');
+
+    status.innerHTML = `<span class="ok">Loaded ${data?.length ?? 0} truck(s).</span>`;
+  }
+
+  async function addTruck(){
+    const input = document.getElementById('truck-name');
+    const btn = document.getElementById('add-truck-btn');
+    const status = document.getElementById('trucks-status');
+
+    const name = (input.value || '').trim();
+    if (!name){
+      status.innerHTML = `<span class="err">Enter a truck name.</span>`;
+      return;
     }
 
-    async function addTruck(){
-      const input = document.getElementById('truck-name');
-      const btn = document.getElementById('add-truck-btn');
-      const status = document.getElementById('trucks-status');
-      const name = (input.value || '').trim();
-      if (!name){ status.innerHTML = `<span class="err">Enter a truck name.</span>`; return; }
-      btn.disabled = true;
-      const { error } = await supabase.from('Trucks').insert({ name });
-      btn.disabled = false;
-      if (error){ console.error('addTruck error:', error); status.innerHTML = `<span class="err">Add failed: ${error.message}</span>`; return; }
-      input.value = '';
-      status.innerHTML = `<span class="ok">Truck added.</span>`;
-      loadTrucks();
+    btn.disabled = true;
+    const { error } = await supabase.from('Trucks').insert({ name });
+
+    btn.disabled = false;
+
+    if (error){
+      console.error('addTruck error:', error);
+      // 23505 = unique_violation (if you add a UNIQUE index on name)
+      status.innerHTML = `<span class="err">Add failed: ${error.message || 'Unknown error'}</span>`;
+      return;
     }
 
-    async function deleteTruck(id){
-      const status = document.getElementById('trucks-status');
-      if (!confirm('Delete this truck?')) return;
-      const { error } = await supabase.from('Trucks').delete().eq('id', id);
-      if (error){ console.error('deleteTruck error:', error); status.innerHTML = `<span class="err">Delete failed: ${error.message}</span>`; return; }
-      status.innerHTML = `<span class="ok">Truck deleted.</span>`;
-      loadTrucks();
+    input.value = '';
+    status.innerHTML = `<span class="ok">Truck added.</span>`;
+    loadTrucks();
+  }
+
+  async function deleteTruck(id){
+    const status = document.getElementById('trucks-status');
+    if (!confirm('Delete this truck?')) return;
+
+    const { error } = await supabase.from('Trucks').delete().eq('id', id);
+
+    if (error){
+      console.error('deleteTruck error:', error);
+      // 23503 = foreign_key_violation (truck has reservations)
+      if (error.code === '23503'){
+        status.innerHTML = `<span class="err">Cannot delete: this truck has existing reservations.</span>`;
+      } else {
+        status.innerHTML = `<span class="err">Delete failed: ${error.message || 'Unknown error'}</span>`;
+      }
+      return;
     }
+
+    status.innerHTML = `<span class="ok">Truck deleted.</span>`;
+    loadTrucks();
+  }
 
     // ---------- RESERVATIONS ----------
     async function loadReservations(){
