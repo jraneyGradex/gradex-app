@@ -244,39 +244,54 @@
   }
 
     // ---------- RESERVATIONS ----------
-    async function loadReservations(){
-      const status = document.getElementById('res-status');
-      status.textContent = 'Loading reservations...';
-      const { data, error } = await supabase
-        .from('Reservations')
-        .select('id, start_time, end_time, Trucks(name), profiles(name)')
-        .order('start_time', { ascending: true });
+   async function loadReservations(){
+  const status = document.getElementById('res-status');
+  status.textContent = 'Loading reservations...';
 
-      if (error){ console.error('loadReservations error:', error); status.innerHTML = `<span class="err">Error: ${error.message}</span>`; return; }
+  const { data, error } = await supabase
+    .from('Reservations') // or 'reservations' if your table is lowercase
+    .select('id, start_time, end_time, Trucks(name), profiles(name)')
+    .order('start_time', { ascending: true });
 
-      const tbody = document.querySelector('#res-table tbody');
-      tbody.innerHTML = (data || []).map(r => `
-        <tr>
-          <td>${escapeHtml(r.Trucks?.name ?? '')}</td>
-          <td>${escapeHtml(r.profiles?.name ?? '')}</td>
-          <td>${fmtDate(r.start_time)}</td>
-          <td>${fmtDate(r.end_time)}</td>
-          <td class="actions">
-            <button class="btn secondary" onclick="cancelReservation('${r.id}')">Cancel</button>
-          </td>
-        </tr>
-      `).join('');
-      status.innerHTML = `<span class="ok">Loaded ${data?.length ?? 0} reservation(s).</span>`;
-    }
+  if (error){
+    console.error('loadReservations error:', error);
+    status.innerHTML = `<span class="err">Error: ${error.message}</span>`;
+    return;
+  }
 
-    async function cancelReservation(id){
-      const status = document.getElementById('res-status');
-      if (!confirm('Cancel this reservation?')) return;
-      const { error } = await supabase.from('Reservations').delete().eq('id', id);
-      if (error){ console.error('cancelReservation error:', error); status.innerHTML = `<span class="err">Cancel failed: ${error.message}</span>`; return; }
-      status.innerHTML = `<span class="ok">Reservation canceled.</span>`;
-      loadReservations();
-    }
+  const tbody = document.querySelector('#res-table tbody');
+  tbody.innerHTML = (data || []).map(r => `
+    <tr>
+      <td>${escapeHtml(r.Trucks?.name ?? '')}</td>
+      <td>${escapeHtml(r.profiles?.name ?? '')}</td>
+      <td>${fmtDate(r.start_time)}</td>
+      <td>${fmtDate(r.end_time)}</td>
+      <td class="actions">
+        <button class="btn secondary" onclick="cancelReservation('${String(r.id).replace(/'/g, "\\'")}')">Cancel</button>
+      </td>
+    </tr>
+  `).join('');
+
+  status.innerHTML = `<span class="ok">Loaded ${data?.length ?? 0} reservation(s).</span>`;
+}
+
+async function cancelReservation(id){
+  const status = document.getElementById('res-status');
+  if (!confirm('Cancel this reservation?')) return;
+
+  const { error } = await supabase
+    .from('Reservations') // or 'reservations'
+    .delete()
+    .eq('id', id);
+
+  if (error){
+    console.error('cancelReservation error:', error);
+    status.innerHTML = `<span class="err">Cancel failed: ${error.message || 'Unknown error'}</span>`;
+    return;
+  }
+  status.innerHTML = `<span class="ok">Reservation canceled.</span>`;
+  loadReservations();
+}
 
     // ---------- Misc ----------
     function logout(){ localStorage.clear(); window.location.href = 'index.html'; }
