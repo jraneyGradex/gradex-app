@@ -171,23 +171,30 @@
     }
 
     // ===== USERS =====
-    async function loadUsers() {
-      const { data, error } = await supabase.from("profiles").select("id, name, email, user_type");
-      if (error) return console.error(error);
-      const tbody = document.querySelector("#users-table tbody");
-      tbody.innerHTML = data.map(u => `
-        <tr>
-          <td>${u.name}</td>
-          <td>${u.email}</td>
-          <td>${u.user_type}</td>
-          <td>
-            ${u.user_type === "admin"
-              ? `<button class="action" onclick="changeRole('${u.id}', 'user')">Make User</button>`
-              : `<button class="action" onclick="changeRole('${u.id}', 'admin')">Make Admin</button>`}
-          </td>
-        </tr>
-      `).join("");
-    }
+   async function loadUsers() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, name, email, user_type"); // if email is null, switch to the RPC I gave you earlier
+
+  if (error) { console.error("loadUsers error:", error); return; }
+
+  const tbody = document.querySelector("#users-table tbody");
+  tbody.innerHTML = (data || []).map((u) => {
+    const actionBtn =
+      u.user_type === "admin"
+        ? `<button class="action" onclick="changeRole('${u.id}', 'user')">Make User</button>`
+        : `<button class="action" onclick="changeRole('${u.id}', 'admin')">Make Admin</button>`;
+
+    return `
+      <tr>
+        <td>${u.name ?? ""}</td>
+        <td>${u.email ?? ""}</td>
+        <td>${u.user_type ?? ""}</td>
+        <td>${actionBtn}</td>
+      </tr>
+    `;
+  }).join("");
+}
 
     async function changeRole(userId, newRole) {
       const { error } = await supabase.from("profiles").update({ user_type: newRole }).eq("id", userId);
