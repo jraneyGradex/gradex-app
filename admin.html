@@ -8,38 +8,174 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body { background-color: #f3f7fb; font-family: Arial, sans-serif; }
-    header { background-color: #002b5c; color: white; padding: 15px; text-align: center; }
-    .admin-header { margin-top: 5px; }
-    button { cursor: pointer; border: none; border-radius: 5px; }
-    .tab-container { text-align: center; margin: 20px 0; }
+    /* ========== GLOBAL STYLES ========== */
+    body {
+      background-color: #f3f7fb;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      margin: 0;
+      color: #222;
+    }
+
+    /* ========== HEADER ========== */
+    header {
+      background: linear-gradient(90deg, #7ac143 0%, #8cc63f 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.8em;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .admin-header {
+      margin-top: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+    .admin-header p {
+      margin: 0;
+      font-size: 0.95em;
+    }
+    .logout-btn {
+      background-color: white;
+      color: #7ac143;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .logout-btn:hover {
+      background-color: #ebf9e3;
+    }
+
+    /* ========== TABS ========== */
+    .tab-container {
+      text-align: center;
+      margin: 25px 0;
+    }
     .tab-btn {
-      background-color: #8cc63f; color: white; padding: 8px 15px; margin: 0 5px;
-      border-radius: 6px; font-weight: bold;
+      background-color: #8cc63f;
+      color: white;
+      padding: 8px 15px;
+      margin: 0 5px;
+      border-radius: 6px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
     }
-    .tab-btn.active { background-color: #5b8d2c; }
-    .tab-content { display: none; margin: 20px auto; width: 90%; }
-    .tab-content.active { display: block; }
+    .tab-btn.active,
+    .tab-btn:hover {
+      background-color: #5b8d2c;
+    }
+
+    /* ========== TABLES ========== */
     table {
-      width: 100%; border-collapse: collapse; margin-top: 10px;
+      width: 90%;
+      border-collapse: collapse;
+      margin: 0 auto 25px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
     }
-    table th, table td {
-      border: 1px solid #ddd; padding: 8px; text-align: center;
+    table th {
+      background-color: #7ac143;
+      color: white;
+      padding: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    table th { background-color: #333; color: white; }
+    table td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    table tr:nth-child(even) {
+      background-color: #f9fdf6;
+    }
+    table tr:hover {
+      background-color: #eef8e8;
+      transition: background 0.3s;
+    }
+
     .action-btn {
-      background-color: #8cc63f; color: white; padding: 5px 10px; border-radius: 4px;
+      background-color: #8cc63f;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-weight: 500;
     }
-    .action-btn:hover { background-color: #5b8d2c; }
+    .action-btn:hover {
+      background-color: #5b8d2c;
+      transform: translateY(-1px);
+    }
+
+    /* ========== FORMS & MESSAGES ========== */
+    input[type="text"] {
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      width: 200px;
+    }
+
+    p#truckMessage {
+      text-align: center;
+      color: #333;
+      font-weight: 500;
+    }
+
+    /* ========== SUCCESS BANNER ========== */
+    #banner {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #7ac143;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+    .show {
+      display: block !important;
+      animation: fadeout 3s forwards;
+    }
+    @keyframes fadeout {
+      0% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ========== TAB CONTENT ========== */
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
   </style>
 </head>
 
 <body>
+  <div id="banner"></div>
+
   <header>
     <h1>Gradex Admin Dashboard</h1>
     <div class="admin-header">
       <p>Signed in as: <span id="admin-email"></span></p>
-      <button class="tab-btn" style="background:#8cc63f" onclick="logout()">Logout</button>
+      <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </header>
 
@@ -51,10 +187,10 @@
 
   <!-- USERS TAB -->
   <section id="users" class="tab-content active">
-    <h2>Users</h2>
+    <h2 style="text-align:center;">Users</h2>
     <table>
       <thead>
-        <tr><th>Name</th><th>ID</th><th>Role</th><th>Action</th></tr>
+        <tr><th>Name</th><th>Role</th><th>Action</th></tr>
       </thead>
       <tbody id="userTableBody"></tbody>
     </table>
@@ -62,19 +198,21 @@
 
   <!-- TRUCKS TAB -->
   <section id="trucks" class="tab-content">
-    <h2>Manage Trucks</h2>
-    <input type="text" id="newTruckName" placeholder="Truck Name" />
-    <button class="action-btn" onclick="addTruck()">Add Truck</button>
-    <p id="truckMessage"></p>
+    <h2 style="text-align:center;">Manage Trucks</h2>
+    <div style="text-align:center;">
+      <input type="text" id="newTruckName" placeholder="Truck Name" />
+      <button class="action-btn" onclick="addTruck()">Add Truck</button>
+      <p id="truckMessage"></p>
+    </div>
     <table>
-      <thead><tr><th>ID</th><th>Name</th><th>Action</th></tr></thead>
+      <thead><tr><th>Name</th><th>Action</th></tr></thead>
       <tbody id="truckTableBody"></tbody>
     </table>
   </section>
 
   <!-- RESERVATIONS TAB -->
   <section id="reservations" class="tab-content">
-    <h2>All Reservations</h2>
+    <h2 style="text-align:center;">All Reservations</h2>
     <table>
       <thead>
         <tr><th>User</th><th>Truck</th><th>Start</th><th>End</th><th>Action</th></tr>
@@ -84,34 +222,29 @@
   </section>
 
   <script>
-    // ✅ Initialize Supabase
     const supabase = window.supabase.createClient(
       "https://nmbapqhtmjsqwdefewfd.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM",
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      }
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM"
     );
 
-    // ✅ Auth check
+    const banner = document.getElementById("banner");
+    function showBanner(msg) {
+      banner.textContent = msg;
+      banner.classList.add("show");
+      setTimeout(() => banner.classList.remove("show"), 3000);
+    }
+
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        window.location.href = "index.html";
-        return;
-      }
+      if (!session) return (window.location.href = "index.html");
 
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from("profiles")
         .select("user_type")
         .eq("id", session.user.id)
         .maybeSingle();
 
-      if (error || !profile || profile.user_type !== "admin") {
+      if (!profile || profile.user_type !== "admin") {
         window.location.href = "homepage.html";
         return;
       }
@@ -122,15 +255,13 @@
       loadReservations();
     })();
 
-    // ✅ Tabs
     function showTab(tabId) {
-      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
       document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add("active");
       document.getElementById(tabId).classList.add("active");
     }
 
-    // ✅ Logout
     async function logout() {
       await supabase.auth.signOut();
       window.location.href = "index.html";
@@ -138,95 +269,63 @@
 
     // ===== USERS =====
     async function loadUsers() {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, name, user_type")
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Error loading users:", error);
-        return;
-      }
+      const { data, error } = await supabase.from("profiles").select("id, name, user_type");
+      if (error) return console.error(error);
 
       const tbody = document.getElementById("userTableBody");
-      tbody.innerHTML = "";
-
-      data.forEach((u) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
+      tbody.innerHTML = data.map(u => `
+        <tr>
           <td>${u.name || "(no name)"}</td>
-          <td>${u.id}</td>
           <td>${u.user_type}</td>
           <td>
-            <button
-              class="action-btn role-toggle"
-              data-user-id="${u.id}"
-              data-next-role="${u.user_type === "admin" ? "user" : "admin"}"
-            >
+            <button class="action-btn role-toggle" data-id="${u.id}" data-role="${u.user_type === "admin" ? "user" : "admin"}">
               ${u.user_type === "admin" ? "Make User" : "Make Admin"}
             </button>
           </td>
-        `;
-        tbody.appendChild(tr);
-      });
+        </tr>`).join("");
     }
 
-    // ✅ Single event handler for all role buttons
-    document.addEventListener("click", async (e) => {
+    document.addEventListener("click", async e => {
       const btn = e.target.closest(".role-toggle");
       if (!btn) return;
+      const id = btn.dataset.id;
+      const role = btn.dataset.role;
 
-      const userId = btn.dataset.userId;
-      const newRole = btn.dataset.nextRole;
+      const { error } = await supabase.from("profiles").update({ user_type: role }).eq("id", id);
+      if (error) return alert(error.message);
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({ user_type: newRole })
-        .eq("id", userId);
-
-      if (error) {
-        alert("Error updating role: " + error.message);
-        return;
-      }
-
+      showBanner(`Role updated to ${role}`);
       loadUsers();
     });
 
     // ===== TRUCKS =====
     async function loadTrucks() {
       const { data, error } = await supabase.from("Trucks").select("*");
-      if (error) return console.error("Truck load error:", error);
+      if (error) return console.error(error);
 
       const tbody = document.getElementById("truckTableBody");
       tbody.innerHTML = data.map(t => `
         <tr>
-          <td>${t.id}</td>
           <td>${t.name}</td>
           <td><button class="action-btn" onclick="deleteTruck('${t.id}')">Delete</button></td>
-        </tr>
-      `).join("");
+        </tr>`).join("");
     }
 
     async function addTruck() {
       const name = document.getElementById("newTruckName").value.trim();
-      const msg = document.getElementById("truckMessage");
-      if (!name) {
-        msg.textContent = "Please enter a truck name.";
-        return;
-      }
+      if (!name) return showBanner("Enter a truck name");
       const { error } = await supabase.from("Trucks").insert({ name });
-      if (error) msg.textContent = "Error adding truck.";
-      else {
-        msg.textContent = "Truck added!";
-        document.getElementById("newTruckName").value = "";
-        loadTrucks();
-      }
+      if (error) return showBanner("Error adding truck");
+      showBanner("Truck added!");
+      document.getElementById("newTruckName").value = "";
+      loadTrucks();
     }
 
     async function deleteTruck(id) {
       const { error } = await supabase.from("Trucks").delete().eq("id", id);
-      if (error) alert("Error deleting truck: " + error.message);
-      else loadTrucks();
+      if (error) return showBanner("Error deleting truck");
+      showBanner("Truck deleted");
+      loadTrucks();
     }
 
     // ===== RESERVATIONS =====
@@ -234,7 +333,7 @@
       const { data, error } = await supabase
         .from("Reservations")
         .select("id, start_time, end_time, profiles(name), Trucks(name)");
-      if (error) return console.error("Reservation load error:", error);
+      if (error) return console.error(error);
 
       const tbody = document.getElementById("reservationTableBody");
       tbody.innerHTML = data.map(r => `
@@ -244,14 +343,14 @@
           <td>${new Date(r.start_time).toLocaleString()}</td>
           <td>${new Date(r.end_time).toLocaleString()}</td>
           <td><button class="action-btn" onclick="cancelReservation('${r.id}')">Cancel</button></td>
-        </tr>
-      `).join("");
+        </tr>`).join("");
     }
 
     async function cancelReservation(id) {
       const { error } = await supabase.from("Reservations").delete().eq("id", id);
-      if (error) alert("Error canceling reservation: " + error.message);
-      else loadReservations();
+      if (error) return showBanner("Error canceling reservation");
+      showBanner("Reservation canceled");
+      loadReservations();
     }
   </script>
 </body>
