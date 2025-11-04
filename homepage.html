@@ -27,6 +27,29 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
 
+    .header-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin: 8px 16px 0;
+    }
+
+    .header-actions button {
+      width: auto;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      background-color: #8cc63f;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.25s;
+    }
+
+    .header-actions button:hover {
+      background-color: #5b8d2c;
+    }
+
     .container {
       display: flex;
       flex-wrap: wrap;
@@ -109,7 +132,7 @@
       background: white;
       border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      padding: 10px;
+      padding: 12px;
       flex: 1 1 550px;
       max-width: 700px;
       min-width: 300px;
@@ -121,44 +144,76 @@
       margin-bottom: 10px;
     }
 
-    .header-actions {
+    /* FullCalendar custom styling */
+    .fc-toolbar {
       display: flex;
-      justify-content: flex-end;
-      margin: 8px 16px 0;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 8px;
+      font-size: 0.95em;
     }
 
-    .header-actions button {
-      width: auto;
-      padding: 6px 12px;
-      border-radius: 5px;
-      font-size: 0.9em;
+    .fc-toolbar-title {
+      font-weight: 600;
+      color: #333;
+      font-size: 1.05em;
     }
 
-    /* Make calendar more compact */
+    .fc-button {
+      background-color: #8cc63f !important;
+      border: none !important;
+      color: white !important;
+      border-radius: 6px !important;
+      font-weight: 600 !important;
+      padding: 4px 10px !important;
+      margin: 0 2px;
+      transition: background 0.25s;
+    }
+
+    .fc-button:hover {
+      background-color: #5b8d2c !important;
+    }
+
+    .fc-event {
+      background-color: #7ac143 !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 6px !important;
+      padding: 4px !important;
+      font-size: 0.8em !important;
+    }
+
+    .fc-event-time, .fc-event-title {
+      display: block;
+      text-align: center;
+      line-height: 1.2em;
+    }
+
+    .fc-event-title {
+      font-weight: 600;
+    }
+
     #calendar {
-      max-height: 550px;
+      max-height: 520px;
       overflow-y: auto;
     }
 
-    /* ✅ Responsive adjustments */
+    /* Mobile tweaks */
     @media (max-width: 768px) {
       .container {
         flex-direction: column;
         align-items: center;
       }
-
-      .calendar {
-        width: 100%;
-        padding: 8px;
-      }
-
-      .sidebar {
+      .calendar, .sidebar {
         width: 100%;
         max-width: none;
       }
-
+      .fc-toolbar {
+        flex-direction: column;
+        gap: 4px;
+      }
       #calendar {
-        max-height: 400px;
+        max-height: 420px;
       }
     }
   </style>
@@ -208,7 +263,6 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM"
     );
 
-    // ✅ Verify session
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -217,19 +271,16 @@
       }
     })();
 
-    // ✅ Load trucks
     async function loadTrucks() {
       const truckList = document.getElementById("truckList");
       const { data, error } = await supabase.from("Trucks").select("id, name");
       if (error) {
-        console.error("Truck load error:", error);
         truckList.innerHTML = `<option>Error loading trucks</option>`;
         return;
       }
       truckList.innerHTML = data.map(t => `<option value="${t.id}">${t.name}</option>`).join("");
     }
 
-    // ✅ Reserve truck
     async function reserveTruck() {
       const truck_id = document.getElementById("truckList").value;
       const start = document.getElementById("start").value;
@@ -249,33 +300,24 @@
         return;
       }
 
-      // Check conflicts
-      const { data: conflicts, error: conflictError } = await supabase
+      const { data: conflicts } = await supabase
         .from("Reservations")
         .select("*, profiles(name)")
         .eq("truck_id", truck_id)
         .lte("start_time", end)
         .gte("end_time", start);
 
-      if (conflictError) {
-        console.error("Conflict check error:", conflictError);
-        message.innerText = "Error checking availability.";
-        return;
-      }
-
-      if (conflicts.length > 0) {
+      if (conflicts?.length > 0) {
         const c = conflicts[0];
         message.innerHTML = `🚫 Already reserved by <b>${c.profiles?.name || "another user"}</b>`;
         return;
       }
 
-      // Insert reservation
       const { error } = await supabase.from("Reservations").insert({
         truck_id, user_id: userId, start_time: start, end_time: end
       });
       if (error) {
         message.innerText = "Reservation failed.";
-        console.error("Insert failed:", error);
       } else {
         message.innerText = "✅ Truck reserved!";
         loadCalendarTable();
@@ -283,19 +325,17 @@
       }
     }
 
-    // ✅ Table display
     async function loadCalendarTable() {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       const table = document.getElementById("calendarBody");
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("Reservations")
         .select("*, Trucks(name)")
         .eq("user_id", userId)
         .order("start_time", { ascending: true });
 
-      if (error) return console.error(error);
       table.innerHTML = data.map(res => `
         <tr>
           <td>${res.Trucks.name}</td>
@@ -305,33 +345,41 @@
       `).join("");
     }
 
-    // ✅ Calendar
     async function loadFullCalendar() {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("Reservations")
-        .select("*, Trucks(name)")
-        .eq("user_id", userId);
-
-      if (error) return console.error(error);
+        .select("*, Trucks(name), profiles(name)");
 
       const events = data.map(res => ({
         title: res.Trucks.name,
         start: res.start_time,
-        end: res.end_time
+        end: res.end_time,
+        extendedProps: { user: res.profiles?.name }
       }));
 
       const calendarEl = document.getElementById("calendar");
       const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: "timeGridWeek",
         height: "auto",
-        aspectRatio: 1.3, // tighter calendar
+        aspectRatio: 1.3,
         headerToolbar: {
           left: "prev,next today",
           center: "title",
           right: "dayGridMonth,timeGridWeek,timeGridDay"
+        },
+        eventContent: function(arg) {
+          const user = arg.event.extendedProps.user || "Unknown";
+          const time = new Date(arg.event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return {
+            html: `<div>
+              <div><strong>${arg.event.title}</strong></div>
+              <div style="font-size:0.75em;">${user}</div>
+              <div style="font-size:0.7em;">${time}</div>
+            </div>`
+          };
         },
         events
       });
@@ -343,7 +391,6 @@
       window.location.href = "index.html";
     }
 
-    // ✅ Init everything
     loadTrucks();
     loadCalendarTable();
     loadFullCalendar();
