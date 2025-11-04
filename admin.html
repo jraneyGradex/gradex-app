@@ -267,36 +267,59 @@
       window.location.href = "index.html";
     }
 
-    // ===== USERS =====
-    async function loadUsers() {
-      const { data, error } = await supabase.from("profiles").select("id, name, user_type");
-      if (error) return console.error(error);
+   // ===== USERS =====
+async function loadUsers(preserveScroll = false) {
+  const tbody = document.getElementById("userTableBody");
+  const scrollPos = preserveScroll ? tbody.parentElement.scrollTop : 0;
 
-      const tbody = document.getElementById("userTableBody");
-      tbody.innerHTML = data.map(u => `
-        <tr>
-          <td>${u.name || "(no name)"}</td>
-          <td>${u.user_type}</td>
-          <td>
-            <button class="action-btn role-toggle" data-id="${u.id}" data-role="${u.user_type === "admin" ? "user" : "admin"}">
-              ${u.user_type === "admin" ? "Make User" : "Make Admin"}
-            </button>
-          </td>
-        </tr>`).join("");
-    }
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, name, user_type")
+    .order("name", { ascending: true });
 
-    document.addEventListener("click", async e => {
-      const btn = e.target.closest(".role-toggle");
-      if (!btn) return;
-      const id = btn.dataset.id;
-      const role = btn.dataset.role;
+  if (error) {
+    console.error("Error loading users:", error);
+    return;
+  }
 
-      const { error } = await supabase.from("profiles").update({ user_type: role }).eq("id", id);
-      if (error) return alert(error.message);
+  tbody.innerHTML = data.map(u => `
+    <tr data-id="${u.id}">
+      <td>${u.name || "(no name)"}</td>
+      <td>${u.user_type}</td>
+      <td>
+        <button class="action-btn role-toggle"
+          data-id="${u.id}"
+          data-role="${u.user_type === "admin" ? "user" : "admin"}">
+          ${u.user_type === "admin" ? "Make User" : "Make Admin"}
+        </button>
+      </td>
+    </tr>
+  `).join("");
 
-      showBanner(`Role updated to ${role}`);
-      loadUsers();
-    });
+  if (preserveScroll) tbody.parentElement.scrollTop = scrollPos;
+}
+
+// ✅ Single event handler for role toggles
+document.addEventListener("click", async e => {
+  const btn = e.target.closest(".role-toggle");
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  const role = btn.dataset.role;
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ user_type: role })
+    .eq("id", id);
+
+  if (error) {
+    showBanner("Error updating role");
+    return;
+  }
+
+  showBanner(`Role updated to ${role}`);
+  await loadUsers(true); // ✅ reload while preserving table order & scroll
+});
 
     // ===== TRUCKS =====
     async function loadTrucks() {
