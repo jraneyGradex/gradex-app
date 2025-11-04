@@ -302,14 +302,13 @@
 
       const { data: conflicts } = await supabase
         .from("Reservations")
-        .select("*, profiles(name)")
+        .select("id, truck_id, start_time, end_time")
         .eq("truck_id", truck_id)
         .lte("start_time", end)
         .gte("end_time", start);
 
       if (conflicts?.length > 0) {
-        const c = conflicts[0];
-        message.innerHTML = `🚫 Already reserved by <b>${c.profiles?.name || "another user"}</b>`;
+        message.innerHTML = `🚫 Already reserved during that time.`;
         return;
       }
 
@@ -345,19 +344,27 @@
       `).join("");
     }
 
+    // ✅ Rebuilt calendar loading without joins
     async function loadFullCalendar() {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
 
-      const { data } = await supabase
+      // Fetch base data
+      const { data: reservations } = await supabase
         .from("Reservations")
-        .select("*, Trucks(name), profiles(name)");
+        .select("id, truck_id, user_id, start_time, end_time");
 
-      const events = data.map(res => ({
-        title: res.Trucks.name,
-        start: res.start_time,
-        end: res.end_time,
-        extendedProps: { user: res.profiles?.name }
+      const { data: trucks } = await supabase.from("Trucks").select("id, name");
+      const { data: profiles } = await supabase.from("profiles").select("id, name");
+
+      const truckMap = Object.fromEntries(trucks.map(t => [t.id, t.name]));
+      const userMap = Object.fromEntries(profiles.map(u => [u.id, u.name]));
+
+      const events = reservations.map(r => ({
+        title: truckMap[r.truck_id] || "Unknown Truck",
+        start: r.start_time,
+        end: r.end_time,
+        extendedProps: { user: userMap[r.user_id] || "Unknown User" }
       }));
 
       const calendarEl = document.getElementById("calendar");
@@ -371,7 +378,7 @@
           right: "dayGridMonth,timeGridWeek,timeGridDay"
         },
         eventContent: function(arg) {
-          const user = arg.event.extendedProps.user || "Unknown";
+          const user = arg.event.extendedProps.user;
           const time = new Date(arg.event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           return {
             html: `<div>
