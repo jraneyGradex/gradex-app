@@ -28,6 +28,20 @@
 			}
 		);
 	</script>
+	<script>
+	(async () => {
+		const { data: { session }, error } = await supabase.auth.getSession();
+
+		if (!session) {
+		console.warn("No session found → redirecting to sign in");
+		window.location.href = "index.html";
+		return;
+		}
+
+		console.log("Signed in as:", session.user.email);
+    // you can continue loading page content here
+		})();
+	</script>
 </head>
 <body>
   <h1>Truck Reservations</h1>

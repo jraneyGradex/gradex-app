@@ -114,18 +114,27 @@
       await signInUser();
     });
 
-    async function signInUser() {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const message = document.getElementById("message");
-      message.textContent = "";
+   async function signInUser() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const message = document.getElementById("message");
+  message.textContent = "";
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data?.user) {
-        console.error("Sign-in error:", error);
-        message.textContent = error?.message || "Login failed.";
-        return;
-      }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    message.textContent = error.message;
+    return;
+  }
+
+  // ✅ Wait until Supabase confirms the session exists
+  await new Promise(resolve => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) resolve();
+    });
+  });
+
+  window.location.href = "homepage.html"; // or admin.html depending on role
+}
 
       // Wait for session
       const { data: { session } } = await supabase.auth.getSession();

@@ -20,6 +20,20 @@
 			}
 		);
 	</script>
+	<script>
+	(async () => {
+		const { data: { session }, error } = await supabase.auth.getSession();
+
+		if (!session) {
+		console.warn("No session found → redirecting to sign in");
+		window.location.href = "index.html";
+		return;
+		}
+
+		console.log("Signed in as:", session.user.email);
+    // you can continue loading page content here
+		})();
+	</script>
   <style>
     :root{
       --gx-bg:#F3F6FB; --gx-text:#1E1E1E; --gx-primary:#8DC63F; --gx-primary-hover:#76b531; --gx-card:#fff;
