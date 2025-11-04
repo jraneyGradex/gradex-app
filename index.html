@@ -91,6 +91,7 @@
   </div>
 
   <script>
+    // ✅ Initialize Supabase client
     const supabase = window.supabase.createClient(
       "https://nmbapqhtmjsqwdefewfd.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM",
@@ -103,6 +104,7 @@
       }
     );
 
+    // ✅ Handle login form
     document.getElementById("login-form").addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -116,6 +118,7 @@
         return;
       }
 
+      // --- Attempt login ---
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error || !data?.user) {
         console.error("Sign-in error:", error);
@@ -123,16 +126,19 @@
         return;
       }
 
-      await new Promise((resolve) => {
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === "SIGNED_IN" && session) resolve();
-        });
-      });
+      // --- Wait a brief moment for Supabase to persist session ---
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       const { data: { session } } = await supabase.auth.getSession();
-      const uid = session?.user?.id;
-      const userEmail = session?.user?.email;
+      if (!session) {
+        message.textContent = "Session not established. Please try again.";
+        return;
+      }
 
+      const uid = session.user.id;
+      const userEmail = session.user.email;
+
+      // --- Ensure profile exists ---
       if (uid && userEmail) {
         const { data: existingProfile } = await supabase
           .from("profiles")
@@ -141,19 +147,32 @@
           .maybeSingle();
 
         if (!existingProfile) {
-          await supabase.from("profiles").insert({
+          const { error: insertErr } = await supabase.from("profiles").insert({
             id: uid,
             name: userEmail.split("@")[0],
             user_type: "user"
           });
+
+          if (insertErr) {
+            console.error("Profile creation failed:", insertErr);
+            message.textContent = "Profile creation failed.";
+            return;
+          }
         }
       }
 
-      const { data: profile } = await supabase
+      // --- Fetch final role and redirect ---
+      const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("user_type")
         .eq("id", uid)
         .maybeSingle();
+
+      if (profErr) {
+        console.error("Profile fetch error:", profErr);
+        message.textContent = "Could not load user profile.";
+        return;
+      }
 
       if (profile?.user_type === "admin") {
         window.location.href = "admin.html";
