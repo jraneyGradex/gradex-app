@@ -7,8 +7,8 @@
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
 
+<body>
   <div class="login-box">
     <h1>Sign In</h1>
     <form id="login-form">
@@ -20,7 +20,7 @@
   </div>
 
   <script>
-    // ✅ Initialize Supabase client
+    // ✅ Initialize Supabase client with session persistence
     const supabase = window.supabase.createClient(
       "https://nmbapqhtmjsqwdefewfd.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM",
@@ -33,7 +33,7 @@
       }
     );
 
-    // ✅ Handle form submit
+    // ✅ Handle form submission
     document.getElementById("login-form").addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -47,49 +47,54 @@
         return;
       }
 
-      // --- Sign in ---
+      // --- Attempt sign-in ---
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
       if (error || !data?.user) {
         console.error("Sign-in error:", error);
         message.textContent = error?.message || "Login failed.";
         return;
       }
 
-      // --- Wait for session to persist before redirect ---
+      // --- Wait for session to persist ---
       await new Promise((resolve) => {
         const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === "SIGNED_IN" && session) {
-            resolve();
-          }
+          if (event === "SIGNED_IN" && session) resolve();
         });
       });
 
-      // --- Get the session & user ---
+      // --- Fetch session ---
       const { data: { session } } = await supabase.auth.getSession();
       const uid = session?.user?.id;
       const userEmail = session?.user?.email;
 
-      // --- Ensure profile row exists ---
+      // --- Ensure profile exists (without overwriting admin roles) ---
       if (uid && userEmail) {
-        const { error: upErr } = await supabase
+        const { data: existingProfile, error: existingErr } = await supabase
           .from("profiles")
-          .upsert(
-            {
+          .select("user_type")
+          .eq("id", uid)
+          .maybeSingle();
+
+        if (existingErr) {
+          console.error("Profile fetch error:", existingErr);
+        } else if (!existingProfile) {
+          const { error: insertErr } = await supabase
+            .from("profiles")
+            .insert({
               id: uid,
               name: userEmail.split("@")[0],
               user_type: "user"
-            },
-            { onConflict: "id" }
-          );
-        if (upErr) {
-          console.error("Profile setup failed:", upErr);
-          message.textContent = "Profile setup failed.";
-          return;
+            });
+
+          if (insertErr) {
+            console.error("Profile creation failed:", insertErr);
+            message.textContent = "Profile creation failed.";
+            return;
+          }
         }
       }
 
-      // --- Get role & redirect ---
+      // --- Fetch final role for redirect ---
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("user_type")
@@ -104,14 +109,13 @@
 
       // --- Redirect based on role ---
       if (profile?.user_type === "admin") {
+        console.log("Redirecting admin:", userEmail);
         window.location.href = "admin.html";
       } else {
+        console.log("Redirecting user:", userEmail);
         window.location.href = "homepage.html";
       }
     });
   </script>
-
 </body>
 </html>
-</html>
-
