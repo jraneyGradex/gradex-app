@@ -20,10 +20,10 @@
   </div>
 
   <script>
-    // ✅ Initialize Supabase with session persistence
+    // ✅ Initialize Supabase client
     const supabase = window.supabase.createClient(
-      "https://nmbapqhtmjsqwdefewfd.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM"
+      "https://YOUR_PROJECT_REF.supabase.co",   // ← replace with your real URL
+      "YOUR_PUBLIC_ANON_KEY",                   // ← replace with your anon key
       {
         auth: {
           persistSession: true,
@@ -33,15 +33,21 @@
       }
     );
 
-    // ✅ Handle form submission
+    // ✅ Handle form submit
     document.getElementById("login-form").addEventListener("submit", async (e) => {
       e.preventDefault();
+
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const message = document.getElementById("message");
       message.textContent = "";
 
-      // Attempt sign in
+      if (!email || !password) {
+        message.textContent = "Please enter both email and password.";
+        return;
+      }
+
+      // --- Sign in ---
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error || !data?.user) {
@@ -50,19 +56,21 @@
         return;
       }
 
-      // ✅ Wait until Supabase confirms the session exists
-      await new Promise(resolve => {
+      // --- Wait for session to persist before redirect ---
+      await new Promise((resolve) => {
         const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === "SIGNED_IN" && session) resolve();
+          if (event === "SIGNED_IN" && session) {
+            resolve();
+          }
         });
       });
 
-      // ✅ Once session exists, get it
+      // --- Get the session & user ---
       const { data: { session } } = await supabase.auth.getSession();
       const uid = session?.user?.id;
       const userEmail = session?.user?.email;
 
-      // ✅ Ensure profile exists for this user
+      // --- Ensure profile row exists ---
       if (uid && userEmail) {
         const { error: upErr } = await supabase
           .from("profiles")
@@ -81,7 +89,7 @@
         }
       }
 
-      // ✅ Check role
+      // --- Get role & redirect ---
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("user_type")
@@ -94,7 +102,7 @@
         return;
       }
 
-      // ✅ Redirect based on role
+      // --- Redirect based on role ---
       if (profile?.user_type === "admin") {
         window.location.href = "admin.html";
       } else {
@@ -104,5 +112,6 @@
   </script>
 
 </body>
+</html>
 </html>
 
