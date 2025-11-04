@@ -2,15 +2,63 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard - Gradex</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gradex Admin Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
   <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <style>
+    body { background-color: #f3f7fb; font-family: Arial, sans-serif; }
+    header {
+      background-color: #002b5c;
+      color: white;
+      padding: 15px;
+      text-align: center;
+    }
+    .admin-header { margin-top: 5px; }
+    button { cursor: pointer; border: none; border-radius: 5px; }
+    .tab-container {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .tab-btn {
+      background-color: #8cc63f;
+      color: white;
+      padding: 8px 15px;
+      margin: 0 5px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .tab-btn.active { background-color: #5b8d2c; }
+    .tab-content { display: none; margin: 20px auto; width: 90%; }
+    .tab-content.active { display: block; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    table th {
+      background-color: #333;
+      color: white;
+    }
+    .action-btn {
+      background-color: #8cc63f;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+    .action-btn:hover { background-color: #5b8d2c; }
+  </style>
+
   <script>
-    // ✅ Initialize Supabase only once
+    // ✅ Initialize Supabase
     const supabase = window.supabase.createClient(
       "https://nmbapqhtmjsqwdefewfd.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM",
@@ -23,7 +71,7 @@
       }
     );
 
-    // ✅ Ensure only admins can view this page
+    // ✅ Ensure only admins can access
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -38,15 +86,11 @@
         .maybeSingle();
 
       if (error || !profile || profile.user_type !== "admin") {
-        console.warn("Access denied, redirecting...");
         window.location.href = "homepage.html";
         return;
       }
 
-      console.log("Signed in as admin:", session.user.email);
       document.getElementById("admin-email").innerText = session.user.email;
-
-      // Load all data after confirming admin
       loadUsers();
       loadTrucks();
       loadReservations();
@@ -59,160 +103,148 @@
     <h1>Gradex Admin Dashboard</h1>
     <div class="admin-header">
       <p>Signed in as: <span id="admin-email"></span></p>
-      <button onclick="logout()">Logout</button>
+      <button class="tab-btn" style="background:#8cc63f" onclick="logout()">Logout</button>
     </div>
   </header>
 
-  <main>
-    <div class="tab-container">
-      <button class="tab-btn" onclick="showTab('users')">Users</button>
-      <button class="tab-btn" onclick="showTab('trucks')">Trucks</button>
-      <button class="tab-btn" onclick="showTab('reservations')">Reservations</button>
-    </div>
+  <div class="tab-container">
+    <button class="tab-btn active" onclick="showTab('users')">Users</button>
+    <button class="tab-btn" onclick="showTab('trucks')">Trucks</button>
+    <button class="tab-btn" onclick="showTab('reservations')">Reservations</button>
+  </div>
 
-    <section id="users" class="tab-content active">
-      <h2>Users</h2>
-      <table>
-        <thead>
-          <tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="userTableBody"></tbody>
-      </table>
-    </section>
+  <!-- USERS TAB -->
+  <section id="users" class="tab-content active">
+    <h2>Users</h2>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>ID</th><th>Role</th><th>Action</th></tr>
+      </thead>
+      <tbody id="userTableBody"></tbody>
+    </table>
+  </section>
 
-    <section id="trucks" class="tab-content">
-      <h2>Manage Trucks</h2>
-      <input type="text" id="newTruckName" placeholder="Truck Name" />
-      <button onclick="addTruck()">Add Truck</button>
-      <p id="truckMessage"></p>
-      <table>
-        <thead>
-          <tr><th>ID</th><th>Name</th><th>Action</th></tr>
-        </thead>
-        <tbody id="truckTableBody"></tbody>
-      </table>
-    </section>
+  <!-- TRUCKS TAB -->
+  <section id="trucks" class="tab-content">
+    <h2>Manage Trucks</h2>
+    <input type="text" id="newTruckName" placeholder="Truck Name" />
+    <button class="action-btn" onclick="addTruck()">Add Truck</button>
+    <p id="truckMessage"></p>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Action</th></tr></thead>
+      <tbody id="truckTableBody"></tbody>
+    </table>
+  </section>
 
-    <section id="reservations" class="tab-content">
-      <h2>All Reservations</h2>
-      <table>
-        <thead>
-          <tr><th>User</th><th>Truck</th><th>Start</th><th>End</th><th>Action</th></tr>
-        </thead>
-        <tbody id="reservationTableBody"></tbody>
-      </table>
-    </section>
-  </main>
+  <!-- RESERVATIONS TAB -->
+  <section id="reservations" class="tab-content">
+    <h2>All Reservations</h2>
+    <table>
+      <thead>
+        <tr><th>User</th><th>Truck</th><th>Start</th><th>End</th><th>Action</th></tr>
+      </thead>
+      <tbody id="reservationTableBody"></tbody>
+    </table>
+  </section>
 
   <script>
-    // ✅ Tabs
+    // ✅ Tab switching
     function showTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
+      document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add("active");
+      document.getElementById(tabId).classList.add("active");
     }
 
-    // ✅ Logout function must be global
+    // ✅ Logout
     async function logout() {
       await supabase.auth.signOut();
-      localStorage.clear();
       window.location.href = "index.html";
     }
 
-    // ✅ Load all users
+    // ✅ Load Users
     async function loadUsers() {
       const { data, error } = await supabase.from("profiles").select("id, name, user_type");
-      if (error) {
-        console.error("Error loading users:", error);
-        return;
-      }
+      if (error) return console.error("Error loading users:", error);
 
       const table = document.getElementById("userTableBody");
       table.innerHTML = data.map(u => `
         <tr>
-          <td>${u.name}</td>
+          <td>${u.name || "(no name)"}</td>
           <td>${u.id}</td>
           <td>${u.user_type}</td>
           <td>
-            ${u.user_type !== 'admin'
-              ? `<button onclick="makeAdmin('${u.id}')">Make Admin</button>`
-              : '<em>Admin</em>'}
+            ${
+              u.user_type === "admin"
+                ? `<button class="action-btn" onclick="changeRole('${u.id}', 'user')">Make User</button>`
+                : `<button class="action-btn" onclick="changeRole('${u.id}', 'admin')">Make Admin</button>`
+            }
           </td>
         </tr>
       `).join("");
     }
 
-    // ✅ Promote user to admin
-    async function makeAdmin(userId) {
+    // ✅ Toggle role between admin/user
+    async function changeRole(userId, newRole) {
       const { error } = await supabase
         .from("profiles")
-        .update({ user_type: "admin" })
+        .update({ user_type: newRole })
         .eq("id", userId);
       if (error) {
-        alert("Error updating user: " + error.message);
+        alert("Error updating role: " + error.message);
         return;
       }
-      alert("User promoted to admin.");
       loadUsers();
     }
 
-    // ✅ Load trucks
+    // ✅ Load Trucks
     async function loadTrucks() {
       const { data, error } = await supabase.from("Trucks").select("*");
-      const table = document.getElementById("truckTableBody");
-      if (error) {
-        console.error("Truck load error:", error);
-        return;
-      }
+      if (error) return console.error("Truck load error:", error);
 
+      const table = document.getElementById("truckTableBody");
       table.innerHTML = data.map(t => `
         <tr>
           <td>${t.id}</td>
           <td>${t.name}</td>
-          <td><button onclick="deleteTruck('${t.id}')">Delete</button></td>
+          <td><button class="action-btn" onclick="deleteTruck('${t.id}')">Delete</button></td>
         </tr>
       `).join("");
     }
 
-    // ✅ Add truck
+    // ✅ Add Truck
     async function addTruck() {
       const name = document.getElementById("newTruckName").value.trim();
-      const message = document.getElementById("truckMessage");
+      const msg = document.getElementById("truckMessage");
       if (!name) {
-        message.innerText = "Enter a truck name.";
+        msg.textContent = "Please enter a truck name.";
         return;
       }
       const { error } = await supabase.from("Trucks").insert({ name });
-      if (error) {
-        message.innerText = "Error adding truck.";
-        console.error("Truck insert error:", error);
-      } else {
-        message.innerText = "Truck added!";
+      if (error) msg.textContent = "Error adding truck.";
+      else {
+        msg.textContent = "Truck added!";
         document.getElementById("newTruckName").value = "";
         loadTrucks();
       }
     }
 
-    // ✅ Delete truck
+    // ✅ Delete Truck
     async function deleteTruck(id) {
       const { error } = await supabase.from("Trucks").delete().eq("id", id);
-      if (error) {
-        alert("Error deleting truck: " + error.message);
-        return;
+      if (error) alert("Error deleting truck: " + error.message);
+      else {
+        alert("Truck deleted.");
+        loadTrucks();
       }
-      alert("Truck deleted.");
-      loadTrucks();
     }
 
-    // ✅ Load all reservations
+    // ✅ Load Reservations
     async function loadReservations() {
       const { data, error } = await supabase
         .from("Reservations")
         .select("id, start_time, end_time, profiles(name), Trucks(name)");
-
-      if (error) {
-        console.error("Error loading reservations:", error);
-        return;
-      }
+      if (error) return console.error("Reservation load error:", error);
 
       const table = document.getElementById("reservationTableBody");
       table.innerHTML = data.map(r => `
@@ -221,20 +253,19 @@
           <td>${r.Trucks?.name || "Unknown"}</td>
           <td>${new Date(r.start_time).toLocaleString()}</td>
           <td>${new Date(r.end_time).toLocaleString()}</td>
-          <td><button onclick="cancelReservation('${r.id}')">Cancel</button></td>
+          <td><button class="action-btn" onclick="cancelReservation('${r.id}')">Cancel</button></td>
         </tr>
       `).join("");
     }
 
-    // ✅ Cancel reservation
-    async function cancelReservation(resId) {
-      const { error } = await supabase.from("Reservations").delete().eq("id", resId);
-      if (error) {
-        alert("Error canceling reservation: " + error.message);
-        return;
+    // ✅ Cancel Reservation
+    async function cancelReservation(id) {
+      const { error } = await supabase.from("Reservations").delete().eq("id", id);
+      if (error) alert("Error canceling reservation: " + error.message);
+      else {
+        alert("Reservation canceled.");
+        loadReservations();
       }
-      alert("Reservation canceled.");
-      loadReservations();
     }
   </script>
 </body>
