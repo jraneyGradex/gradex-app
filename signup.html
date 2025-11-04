@@ -5,30 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gradex Inc - Sign Up</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-	<script>
-	// Initialize Supabase with persistence ON
-	const supabase = window.supabase.createClient(
-      "https://nmbapqhtmjsqwdefewfd.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM",
-		{
-		auth: {
-			persistSession: true,          // ✅ store session in localStorage/cookies
-			autoRefreshToken: true,        // ✅ refresh token automatically
-			detectSessionInUrl: true       // ✅ handle redirects & SSO URLs
-		}
-		}
-	);
-	</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     body {
-      background-color: #F3F6FB;
+      background-color: #f3f7fb;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
-      font-family: Arial, sans-serif;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
     }
 
     .auth-card {
@@ -42,7 +29,7 @@
     }
 
     .auth-card img {
-      max-width: 180px;
+      max-width: 160px;
       margin-bottom: 20px;
     }
 
@@ -56,22 +43,24 @@
 
     button {
       width: 100%;
-      background-color: #8DC63F;
+      background-color: #8cc63f;
       color: white;
       border: none;
       padding: 12px;
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
+      transition: background 0.25s;
     }
 
     button:hover {
-      background-color: #76b531;
+      background-color: #5b8d2c;
     }
 
     a {
-      color: #8DC63F;
+      color: #8cc63f;
       text-decoration: none;
+      font-weight: bold;
     }
 
     a:hover {
@@ -81,6 +70,7 @@
     #message {
       color: red;
       margin-top: 10px;
+      font-weight: 500;
     }
   </style>
 </head>
@@ -88,9 +78,9 @@
 
   <div class="auth-card">
     <img src="Logo.png" alt="Gradex Logo" />
-    <h2>Create an Account</h2>
+    <h2>Create Your Gradex Account</h2>
 
-    <form onsubmit="signUpUser(); return false;">
+    <form id="signup-form">
       <input id="name" type="text" placeholder="Full Name" required />
       <input id="email" type="email" placeholder="Email" required />
       <input id="password" type="password" placeholder="Password" required />
@@ -102,44 +92,59 @@
   </div>
 
   <script>
+    // ✅ Initialize Supabase once
     const supabase = window.supabase.createClient(
       "https://nmbapqhtmjsqwdefewfd.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tYmFwcWh0bWpzcXdkZWZld2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTM3MzksImV4cCI6MjA2OTM4OTczOX0.TJmTwXT29jnbtu4Y4QvL0dlUsFFuOPiWsD7BzSOPUfM",
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      }
     );
 
-    async function signUpUser() {
+    document.getElementById("signup-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
-      const name = document.getElementById("name").value.trim();
       const message = document.getElementById("message");
       message.textContent = "";
 
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password
-      });
+      // --- Step 1: Create user ---
+      const { data, error } = await supabase.auth.signUp({ email, password });
 
-      if (signUpError || !signUpData.user) {
-        message.textContent = "Signup failed: " + signUpError.message;
+      if (error) {
+        message.textContent = "Signup failed: " + error.message;
         return;
       }
 
-      const user = signUpData.user;
+      const user = data.user;
+      if (!user) {
+        message.textContent = "Signup failed: No user data returned.";
+        return;
+      }
 
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: user.id,
-        name,
-        user_type: "user"
-      });
+      // --- Step 2: Create profile record ---
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          name,
+          user_type: "user"
+        });
 
       if (profileError) {
         message.textContent = "Profile setup failed: " + profileError.message;
         return;
       }
 
-      alert("Account created! You can now sign in.");
+      alert("✅ Account created successfully! You can now sign in.");
       window.location.href = "index.html";
-    }
+    });
   </script>
 </body>
 </html>
