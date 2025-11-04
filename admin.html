@@ -6,6 +6,20 @@
   <title>Gradex Admin Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+	<script>
+	// Initialize Supabase with persistence ON
+		const supabase = window.supabase.createClient(
+			"https://YOUR_PROJECT_REF.supabase.co",      // ← your real Supabase URL
+			"YOUR_PUBLIC_ANON_KEY",                      // ← your anon key
+			{
+			auth: {
+				persistSession: true,          // ✅ store session in localStorage/cookies
+				autoRefreshToken: true,        // ✅ refresh token automatically
+				detectSessionInUrl: true       // ✅ handle redirects & SSO URLs
+			}
+			}
+		);
+	</script>
   <style>
     :root{
       --gx-bg:#F3F6FB; --gx-text:#1E1E1E; --gx-primary:#8DC63F; --gx-primary-hover:#76b531; --gx-card:#fff;

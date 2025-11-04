@@ -6,7 +6,20 @@
   <title>Gradex Inc - Sign Up</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-
+	<script>
+	// Initialize Supabase with persistence ON
+	const supabase = window.supabase.createClient(
+		"https://YOUR_PROJECT_REF.supabase.co",      // ← your real Supabase URL
+		"YOUR_PUBLIC_ANON_KEY",                      // ← your anon key
+		{
+		auth: {
+			persistSession: true,          // ✅ store session in localStorage/cookies
+			autoRefreshToken: true,        // ✅ refresh token automatically
+			detectSessionInUrl: true       // ✅ handle redirects & SSO URLs
+		}
+		}
+	);
+	</script>
   <style>
     body {
       background-color: #F3F6FB;
